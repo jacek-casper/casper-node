@@ -1,4 +1,4 @@
-use std::{future::Future, net::SocketAddr, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, future::Future, net::SocketAddr, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 
@@ -13,9 +13,9 @@ use casper_types::{
     contract_messages::Message,
     execution::{ExecutionResult, ExecutionResultV2},
     AvailableBlockRange, BlockBody, BlockHash, BlockHashAndHeight, BlockHeader, BlockSignatures,
-    BlockSynchronizerStatus, Digest, FinalizedApprovals, Key, KeyTag, NextUpgrade, PeersMap,
+    BlockSynchronizerStatus, Digest, EraId, FinalizedApprovals, Key, KeyTag, NextUpgrade, PeersMap,
     ProtocolVersion, PublicKey, ReactorState, TimeDiff, Timestamp, Transaction, TransactionHash,
-    Transfer,
+    Transfer, ValidatorChange,
 };
 use juliet::{
     io::IoCoreBuilder,
@@ -269,6 +269,17 @@ pub trait NodeClient: Send + Sync {
     async fn read_global_state_bytes(&self) -> Result<Option<Vec<u8>>, Error> {
         self.read_from_mem(NonPersistedDataRequest::GlobalStateBytes)
             .await
+    }
+
+    async fn read_validator_changes(
+        &self,
+    ) -> Result<BTreeMap<PublicKey, Vec<(EraId, ValidatorChange)>>, Error> {
+        let resp = self
+            .read_from_mem(NonPersistedDataRequest::ConsensusValidatorChanges)
+            .await?
+            .ok_or(Error::NoResponseBody)?;
+        bytesrepr::deserialize_from_slice(resp)
+            .map_err(|err| Error::Deserialization(err.to_string()))
     }
 }
 
