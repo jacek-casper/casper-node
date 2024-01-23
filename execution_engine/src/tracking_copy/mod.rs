@@ -15,12 +15,15 @@ use std::{
 use linked_hash_map::LinkedHashMap;
 use thiserror::Error;
 
-use casper_storage::global_state::{state::StateReader, trie::merkle_proof::TrieMerkleProof};
+use casper_storage::global_state::{
+    state::StateReader, trie_store::operations::compute_state_hash,
+};
 use casper_types::{
     addressable_entity::NamedKeys,
     bytesrepr::{self},
     contract_messages::{Message, Messages},
     execution::{Effects, Transform, TransformError, TransformInstruction, TransformKind},
+    global_state::TrieMerkleProof,
     CLType, CLValue, CLValueError, Digest, Key, KeyTag, StoredValue, StoredValueTypeMismatch,
     Tagged, U512,
 };
@@ -713,7 +716,7 @@ pub fn validate_query_proof(
         return Err(ValidationError::UnexpectedKey);
     }
 
-    if hash != &first_proof.compute_state_hash()? {
+    if hash != &compute_state_hash(first_proof)? {
         return Err(ValidationError::InvalidProofHash);
     }
 
@@ -745,7 +748,7 @@ pub fn validate_query_proof(
             return Err(ValidationError::UnexpectedKey);
         }
 
-        if hash != &proof.compute_state_hash()? {
+        if hash != &compute_state_hash(proof)? {
             return Err(ValidationError::InvalidProofHash);
         }
 
@@ -775,7 +778,7 @@ pub fn validate_balance_proof(
         return Err(ValidationError::UnexpectedKey);
     }
 
-    if hash != &balance_proof.compute_state_hash()? {
+    if hash != &compute_state_hash(balance_proof)? {
         return Err(ValidationError::InvalidProofHash);
     }
 

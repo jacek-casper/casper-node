@@ -1193,14 +1193,12 @@ mod trie_chunking_tests {
     use casper_execution_engine::engine_state::engine_config::{
         DEFAULT_FEE_HANDLING, DEFAULT_REFUND_HANDLING,
     };
-    use casper_storage::global_state::{
-        state::StateProvider,
-        trie::{Pointer, Trie},
-    };
+    use casper_storage::global_state::{state::StateProvider, trie::Trie};
     use casper_types::{
         account::AccountHash,
         bytesrepr,
         execution::{Transform, TransformKind},
+        global_state::Pointer,
         testing::TestRng,
         ActivationPoint, CLValue, Chainspec, ChunkWithProof, CoreConfig, Digest, EraId, Key,
         ProtocolConfig, StoredValue, TimeDiff,

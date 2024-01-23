@@ -3,10 +3,7 @@ use std::{cell::Cell, collections::BTreeMap, iter, rc::Rc};
 use assert_matches::assert_matches;
 use proptest::prelude::*;
 
-use casper_storage::global_state::{
-    state::{self, StateProvider, StateReader},
-    trie::merkle_proof::TrieMerkleProof,
-};
+use casper_storage::global_state::state::{self, StateProvider, StateReader};
 use casper_types::{
     account::{AccountHash, ACCOUNT_HASH_LENGTH},
     addressable_entity::{
@@ -14,6 +11,7 @@ use casper_types::{
     },
     execution::{Effects, Transform, TransformKind},
     gens::*,
+    global_state::TrieMerkleProof,
     package::{PackageHash, PackageKindTag},
     AccessRights, AddressableEntity, CLValue, Digest, EntryPoints, HashAddr, Key, KeyTag,
     ProtocolVersion, StoredValue, URef, U256, U512,

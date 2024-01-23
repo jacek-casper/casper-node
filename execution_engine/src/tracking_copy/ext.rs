@@ -3,11 +3,12 @@ use std::{
     convert::{TryFrom, TryInto},
 };
 
-use casper_storage::global_state::{state::StateReader, trie::merkle_proof::TrieMerkleProof};
+use casper_storage::global_state::state::StateReader;
 use casper_types::{
     account::AccountHash,
     addressable_entity::MessageTopics,
     bytesrepr,
+    global_state::TrieMerkleProof,
     package::{EntityVersions, Groups, PackageKind, PackageKindTag, PackageStatus},
     AccessRights, AddressableEntity, AddressableEntityHash, CLValue, EntryPoints, Key, Motes,
     Package, PackageHash, Phase, ProtocolVersion, StoredValue, StoredValueTypeMismatch, URef,

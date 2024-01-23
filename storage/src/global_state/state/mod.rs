@@ -13,13 +13,14 @@ use tracing::{debug, error, warn};
 use casper_types::{
     bytesrepr,
     execution::{Effects, Transform, TransformError, TransformInstruction, TransformKind},
+    global_state::TrieMerkleProof,
     Digest, Key, StoredValue,
 };
 
 pub use self::lmdb::make_temporary_global_state;
 use crate::global_state::{
     transaction_source::{Transaction, TransactionSource},
-    trie::{merkle_proof::TrieMerkleProof, Trie, TrieRaw},
+    trie::{Trie, TrieRaw},
     trie_store::{
         operations::{prune, read, write, ReadResult, WriteResult},
         TrieStore,

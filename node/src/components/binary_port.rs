@@ -436,16 +436,10 @@ where
         .query_global_state(QueryRequest::new(state_root_hash, base_key, path))
         .await
     {
-        Ok(QueryResult::Success { value, proofs }) => match proofs.to_bytes() {
-            Ok(proofs) => BinaryResponse::from_value(
-                GlobalStateQueryResult::new(*value, base16::encode_lower(&proofs)),
-                protocol_version,
-            ),
-            Err(_) => {
-                let error_code = binary_port::ErrorCode::InternalError;
-                BinaryResponse::new_error(error_code, protocol_version)
-            }
-        },
+        Ok(QueryResult::Success { value, proofs }) => BinaryResponse::from_value(
+            GlobalStateQueryResult::new(*value, proofs),
+            protocol_version,
+        ),
         Ok(QueryResult::RootNotFound) => {
             let error_code = binary_port::ErrorCode::RootNotFound;
             BinaryResponse::new_error(error_code, protocol_version)

@@ -16,11 +16,12 @@ use casper_execution_engine::{
 };
 use casper_storage::global_state::{
     state::{CommitProvider, StateProvider},
-    trie::{Pointer, Trie},
+    trie::Trie,
 };
 use casper_types::{
     account::AccountHash,
     bytesrepr::{self},
+    global_state::Pointer,
     runtime_args,
     system::auction,
     ChainspecRegistry, Digest, GenesisAccount, GenesisValidator, Key, Motes, ProtocolVersion,

@@ -41,7 +41,7 @@ use casper_storage::{
             lmdb::LmdbGlobalState, scratch::ScratchGlobalState, CommitProvider, StateProvider,
             StateReader,
         },
-        trie::{merkle_proof::TrieMerkleProof, TrieRaw},
+        trie::TrieRaw,
         trie_store::operations::PruneResult as GlobalStatePruneResult,
     },
 };
@@ -52,6 +52,7 @@ use casper_types::{
     binary_port::{get_all_values_result::GetAllValuesResult, type_wrappers::StoredValues},
     bytesrepr::ToBytes,
     execution::Effects,
+    global_state::TrieMerkleProof,
     package::{EntityVersions, Groups, PackageKind, PackageKindTag, PackageStatus},
     system::{
         auction::{

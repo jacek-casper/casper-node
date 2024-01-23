@@ -36,7 +36,7 @@ use casper_storage::{
             StateReader,
         },
         transaction_source::lmdb::LmdbEnvironment,
-        trie::{merkle_proof::TrieMerkleProof, Trie},
+        trie::Trie,
         trie_store::lmdb::LmdbTrieStore,
     },
 };
@@ -45,6 +45,7 @@ use casper_types::{
     bytesrepr::{self, FromBytes},
     contracts::ContractHash,
     execution::Effects,
+    global_state::TrieMerkleProof,
     package::PackageKindTag,
     runtime_args,
     system::{

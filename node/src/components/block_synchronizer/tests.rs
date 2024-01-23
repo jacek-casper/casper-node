@@ -13,11 +13,10 @@ use derive_more::From;
 use num_rational::Ratio;
 use rand::{seq::IteratorRandom, Rng};
 
-use casper_storage::global_state::trie::merkle_proof::TrieMerkleProof;
 use casper_types::{
-    testing::TestRng, AccessRights, BlockV2, CLValue, Chainspec, Deploy, EraId, Key,
-    LegacyRequiredFinality, ProtocolVersion, PublicKey, SecretKey, StoredValue, TestBlockBuilder,
-    TestBlockV1Builder, TimeDiff, URef, U512,
+    global_state::TrieMerkleProof, testing::TestRng, AccessRights, BlockV2, CLValue, Chainspec,
+    Deploy, EraId, Key, LegacyRequiredFinality, ProtocolVersion, PublicKey, SecretKey, StoredValue,
+    TestBlockBuilder, TestBlockV1Builder, TimeDiff, URef, U512,
 };
 
 use super::*;
