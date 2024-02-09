@@ -112,7 +112,7 @@ pub enum PayloadType {
 }
 
 impl PayloadType {
-    pub(crate) fn new_from_db_id(record_id: RecordId, is_legacy: bool) -> Self {
+    pub(crate) fn new_from_record_id(record_id: RecordId, is_legacy: bool) -> Self {
         match (is_legacy, record_id) {
             (true, RecordId::BlockHeader) => Self::BlockHeaderV1,
             (true, RecordId::BlockBody) => Self::BlockBodyV1,
@@ -338,7 +338,7 @@ impl ToBytes for PayloadType {
 impl FromBytes for PayloadType {
     fn from_bytes(bytes: &[u8]) -> Result<(Self, &[u8]), bytesrepr::Error> {
         let (tag, remainder) = FromBytes::from_bytes(bytes)?;
-        let db_id = match tag {
+        let record_id = match tag {
             BLOCK_HEADER_V1_TAG => PayloadType::BlockHeaderV1,
             BLOCK_HEADER_TAG => PayloadType::BlockHeader,
             BLOCK_BODY_V1_TAG => PayloadType::BlockBodyV1,
@@ -376,7 +376,7 @@ impl FromBytes for PayloadType {
             NODE_STATUS_TAG => PayloadType::NodeStatus,
             _ => return Err(bytesrepr::Error::Formatting),
         };
-        Ok((db_id, remainder))
+        Ok((record_id, remainder))
     }
 }
 

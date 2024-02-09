@@ -335,9 +335,9 @@ where
         } => {
             metrics.binary_port_get_record_count.inc();
             match RecordId::try_from(record_type_tag) {
-                Ok(db_id) => {
-                    let maybe_raw_bytes = effect_builder.get_raw_data(db_id, key).await;
-                    BinaryResponse::from_db_raw_bytes(db_id, maybe_raw_bytes, protocol_version)
+                Ok(record_id) => {
+                    let maybe_raw_bytes = effect_builder.get_raw_data(record_id, key).await;
+                    BinaryResponse::from_db_raw_bytes(record_id, maybe_raw_bytes, protocol_version)
                 }
                 Err(_) => BinaryResponse::new_error(
                     binary_port::ErrorCode::UnsupportedRequest,

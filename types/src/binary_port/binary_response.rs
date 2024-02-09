@@ -52,7 +52,7 @@ impl BinaryResponse {
                 raw_bytes,
             }) => BinaryResponse {
                 header: BinaryResponseHeader::new(
-                    Some(PayloadType::new_from_db_id(record_id, is_legacy)),
+                    Some(PayloadType::new_from_record_id(record_id, is_legacy)),
                     protocol_version,
                 ),
                 payload: raw_bytes,

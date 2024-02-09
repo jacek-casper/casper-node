@@ -11,8 +11,8 @@ const BINARY_PORT_TRY_SPECULATIVE_EXEC_COUNT_NAME: &str = "binary_port_try_specu
 const BINARY_PORT_TRY_SPECULATIVE_EXEC_COUNT_HELP: &str =
     "number of TrySpeculativeExec queries received";
 
-const BINARY_PORT_GET_RECORD_COUNT_NAME: &str = "binary_port_get_db_count";
-const BINARY_PORT_GET_RECORD_COUNT_HELP: &str = "number of received Get queries related to DB";
+const BINARY_PORT_GET_RECORD_COUNT_NAME: &str = "binary_port_get_record_count";
+const BINARY_PORT_GET_RECORD_COUNT_HELP: &str = "number of received Get queries for records";
 
 const BINARY_PORT_GET_INFORMATION_NAME: &str = "binary_port_get_info_count";
 const BINARY_PORT_GET_INFORMATION_HELP: &str =

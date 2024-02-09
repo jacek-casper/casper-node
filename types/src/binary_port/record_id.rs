@@ -11,21 +11,21 @@ use crate::testing::TestRng;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize)]
 #[repr(u16)]
 pub enum RecordId {
-    /// Refers to `BlockHeader` db.
+    /// Refers to `BlockHeader` record.
     BlockHeader = 0,
-    /// Refers to `BlockBody` db.
+    /// Refers to `BlockBody` record.
     BlockBody = 1,
-    /// Refers to `ApprovalsHashes` db.
+    /// Refers to `ApprovalsHashes` record.
     ApprovalsHashes = 2,
-    /// Refers to `BlockMetadata` db.
+    /// Refers to `BlockMetadata` record.
     BlockMetadata = 3,
-    /// Refers to `Transaction` db.
+    /// Refers to `Transaction` record.
     Transaction = 4,
-    /// Refers to `ExecutionResult` db.
+    /// Refers to `ExecutionResult` record.
     ExecutionResult = 5,
-    /// Refers to `Transfer` db.
+    /// Refers to `Transfer` record.
     Transfer = 6,
-    /// Refers to `FinalizedTransactionApprovals` db.
+    /// Refers to `FinalizedTransactionApprovals` record.
     FinalizedTransactionApprovals = 7,
 }
 
