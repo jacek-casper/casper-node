@@ -34,7 +34,7 @@ pub enum GlobalStateRequest {
         /// Key tag
         key_tag: KeyTag,
     },
-    /// Gets value from the trie.
+    /// Get a trie by its Digest.
     Trie {
         /// A trie key.
         trie_key: Digest,
@@ -89,21 +89,21 @@ impl ToBytes for GlobalStateRequest {
     fn write_bytes(&self, writer: &mut Vec<u8>) -> Result<(), bytesrepr::Error> {
         match self {
             GlobalStateRequest::Item {
-                state_identifier: state_root_hash,
+                state_identifier,
                 base_key,
                 path,
             } => {
                 ITEM_TAG.write_bytes(writer)?;
-                state_root_hash.write_bytes(writer)?;
+                state_identifier.write_bytes(writer)?;
                 base_key.write_bytes(writer)?;
                 path.write_bytes(writer)
             }
             GlobalStateRequest::AllItems {
-                state_identifier: state_root_hash,
+                state_identifier,
                 key_tag,
             } => {
                 ALL_ITEMS_TAG.write_bytes(writer)?;
-                state_root_hash.write_bytes(writer)?;
+                state_identifier.write_bytes(writer)?;
                 key_tag.write_bytes(writer)
             }
             GlobalStateRequest::Trie { trie_key } => {
@@ -117,18 +117,18 @@ impl ToBytes for GlobalStateRequest {
         U8_SERIALIZED_LENGTH
             + match self {
                 GlobalStateRequest::Item {
-                    state_identifier: state_root_hash,
+                    state_identifier,
                     base_key,
                     path,
                 } => {
-                    state_root_hash.serialized_length()
+                    state_identifier.serialized_length()
                         + base_key.serialized_length()
                         + path.serialized_length()
                 }
                 GlobalStateRequest::AllItems {
-                    state_identifier: state_root_hash,
+                    state_identifier,
                     key_tag,
-                } => state_root_hash.serialized_length() + key_tag.serialized_length(),
+                } => state_identifier.serialized_length() + key_tag.serialized_length(),
                 GlobalStateRequest::Trie { trie_key } => trie_key.serialized_length(),
             }
     }
