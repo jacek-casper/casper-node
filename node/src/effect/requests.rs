@@ -11,38 +11,29 @@ use std::{
 };
 
 use datasize::DataSize;
-
-use num_rational::Ratio;
 use serde::Serialize;
 use smallvec::SmallVec;
 use static_assertions::const_assert;
 
-use casper_execution_engine::engine_state::{
-    self,
-    balance::{BalanceRequest, BalanceResult},
-    era_validators::GetEraValidatorsError,
-    get_all_values::GetAllValuesRequest,
-    query::{QueryRequest, QueryResult},
+use casper_execution_engine::engine_state::{self};
+use casper_storage::data_access_layer::{
+    get_all_values::{AllValuesRequest, AllValuesResult},
+    AddressableEntityResult, BalanceRequest, BalanceResult, EraValidatorsRequest,
+    EraValidatorsResult, ExecutionResultsChecksumResult, PutTrieRequest, PutTrieResult,
+    QueryRequest, QueryResult, RoundSeigniorageRateRequest, RoundSeigniorageRateResult,
+    TotalSupplyRequest, TotalSupplyResult, TrieRequest, TrieResult,
 };
-use casper_storage::global_state::trie::TrieRaw;
 use casper_types::{
-    addressable_entity::AddressableEntity,
     binary_port::{
-        db_id::DbId,
-        get_all_values_result::GetAllValuesResult,
-        type_wrappers::{
-            ConsensusStatus, ConsensusValidatorChanges, GetTrieFullResult,
-            HighestBlockSequenceCheckResult, LastProgress, NetworkName, SpeculativeExecutionResult,
-        },
-        DbRawBytesSpec,
+        ConsensusStatus, ConsensusValidatorChanges, DbRawBytesSpec, LastProgress, NetworkName,
+        RecordId, SpeculativeExecutionResult, Uptime,
     },
     execution::ExecutionResult,
-    system::auction::EraValidators,
-    AvailableBlockRange, Block, BlockHash, BlockHashAndHeight, BlockHeader, BlockIdentifier,
-    BlockSignatures, BlockSynchronizerStatus, BlockV2, ChainspecRawBytes, DeployHash, Digest,
-    DisplayIter, EraId, FinalitySignature, FinalitySignatureId, FinalizedApprovals, Key,
-    NextUpgrade, ProtocolVersion, PublicKey, ReactorState, Timestamp, Transaction, TransactionHash,
-    TransactionHeader, TransactionId, Transfer, Uptime, U512,
+    AvailableBlockRange, Block, BlockHash, BlockHeader, BlockSignatures, BlockSynchronizerStatus,
+    BlockV2, ChainspecRawBytes, DeployHash, Digest, DisplayIter, EraId, ExecutionInfo,
+    FinalitySignature, FinalitySignatureId, FinalizedApprovals, Key, NextUpgrade, ProtocolVersion,
+    PublicKey, ReactorState, Timestamp, Transaction, TransactionHash, TransactionHeader,
+    TransactionId, Transfer,
 };
 
 use super::{AutoClosingResponder, GossipTarget, Responder};
@@ -53,22 +44,17 @@ use crate::{
             TrieAccumulatorResponse,
         },
         consensus::{ClContext, ProposedBlock},
-        contract_runtime::EraValidatorsRequest,
         diagnostics_port::StopAtSpec,
         fetcher::{FetchItem, FetchResult},
         gossiper::GossipItem,
         network::NetworkInsights,
         transaction_acceptor,
     },
-    contract_runtime::{
-        ContractRuntimeError, RoundSeigniorageRateRequest, SpeculativeExecutionState,
-        TotalSupplyRequest,
-    },
+    contract_runtime::SpeculativeExecutionState,
     types::{
         appendable_block::AppendableBlock, ApprovalsHashes, BlockExecutionResultsOrChunk,
         BlockExecutionResultsOrChunkId, BlockWithMetadata, ExecutableBlock, LegacyDeploy,
-        MetaBlockState, NodeId, StatusFeed, TransactionWithFinalizedApprovals, TrieOrChunk,
-        TrieOrChunkId,
+        MetaBlockState, NodeId, StatusFeed, TransactionWithFinalizedApprovals,
     },
     utils::Source,
 };
@@ -346,8 +332,8 @@ pub(crate) enum StorageRequest {
     },
     /// Retrieve block header with given hash.
     GetRawData {
-        /// From which database.
-        db: DbId,
+        /// Which record to get.
+        record_id: RecordId,
         /// bytesrepr serialized key.
         key: Vec<u8>,
         /// Responder to call with the result.  Returns `None` if the data doesn't exist in
@@ -401,6 +387,14 @@ pub(crate) enum StorageRequest {
     IsTransactionStored {
         transaction_id: TransactionId,
         responder: Responder<bool>,
+    },
+    GetTransactionByHash {
+        transaction_hash: TransactionHash,
+        responder: Responder<Option<Transaction>>,
+    },
+    GetTransactionExecutionInfo {
+        transaction_hash: TransactionHash,
+        responder: Responder<Option<ExecutionInfo>>,
     },
     /// Store execution results for a set of deploys of a single block.
     ///
@@ -496,21 +490,6 @@ pub(crate) enum StorageRequest {
     },
     /// Retrieve the height of the final block of the previous protocol version, if known.
     GetKeyBlockHeightForActivationPoint { responder: Responder<Option<u64>> },
-    /// Retrieve block hash and height for a given transaction.
-    GetBlockHashAndHeightForTransaction {
-        transaction_hash: TransactionHash,
-        responder: Responder<Option<BlockHashAndHeight>>,
-    },
-    /// Retrieve hash of block of a given height.
-    GetBlockHashForHeight {
-        height: u64,
-        responder: Responder<Option<BlockHash>>,
-    },
-    /// Checks if a block with the given hash is among the contiguous sequence of completed blocks.
-    HighestCompletedBlockSequenceContains {
-        block_identifier: BlockIdentifier,
-        responder: Responder<HighestBlockSequenceCheckResult>,
-    },
 }
 
 impl Display for StorageRequest {
@@ -578,6 +557,16 @@ impl Display for StorageRequest {
             StorageRequest::GetTransaction { transaction_id, .. } => {
                 write!(formatter, "get transaction {}", transaction_id)
             }
+            StorageRequest::GetTransactionByHash {
+                transaction_hash, ..
+            } => {
+                write!(formatter, "get transaction by hash {}", transaction_hash)
+            }
+            StorageRequest::GetTransactionExecutionInfo {
+                transaction_hash, ..
+            } => {
+                write!(formatter, "get execution info for {}", transaction_hash)
+            }
             StorageRequest::IsTransactionStored { transaction_id, .. } => {
                 write!(formatter, "is transaction {} stored", transaction_id)
             }
@@ -644,45 +633,10 @@ impl Display for StorageRequest {
             StorageRequest::GetRawData {
                 key,
                 responder: _responder,
-                db,
+                record_id,
             } => {
-                write!(formatter, "get raw data {}::{:?}", db, key)
+                write!(formatter, "get raw data {}::{:?}", record_id, key)
             }
-            StorageRequest::GetBlockHashAndHeightForTransaction {
-                transaction_hash,
-                responder: _responder,
-            } => {
-                write!(
-                    formatter,
-                    "get block hash and height for transaction {}",
-                    transaction_hash
-                )
-            }
-            StorageRequest::GetBlockHashForHeight {
-                height,
-                responder: _responder,
-            } => {
-                write!(formatter, "get block hash for height {}", height)
-            }
-            StorageRequest::HighestCompletedBlockSequenceContains {
-                block_identifier,
-                responder: _responder,
-            } => match block_identifier {
-                BlockIdentifier::Hash(hash) => {
-                    write!(
-                        formatter,
-                        "highest completed block sequence contains hash {}",
-                        hash
-                    )
-                }
-                BlockIdentifier::Height(height) => {
-                    write!(
-                        formatter,
-                        "highest completed block sequence contains height {}",
-                        height
-                    )
-                }
-            },
         }
     }
 }
@@ -787,29 +741,29 @@ pub(crate) enum ContractRuntimeRequest {
     Query {
         /// Query request.
         #[serde(skip_serializing)]
-        query_request: QueryRequest,
+        request: QueryRequest,
         /// Responder to call with the query result.
-        responder: Responder<Result<QueryResult, engine_state::Error>>,
+        responder: Responder<QueryResult>,
     },
     /// A balance request.
     GetBalance {
         /// Balance request.
         #[serde(skip_serializing)]
-        balance_request: BalanceRequest,
+        request: BalanceRequest,
         /// Responder to call with the balance result.
-        responder: Responder<Result<BalanceResult, engine_state::Error>>,
+        responder: Responder<BalanceResult>,
     },
     /// Get the total supply on the chain.
     GetTotalSupply {
         #[serde(skip_serializing)]
-        total_supply_request: TotalSupplyRequest,
-        responder: Responder<Result<U512, engine_state::Error>>,
+        request: TotalSupplyRequest,
+        responder: Responder<TotalSupplyResult>,
     },
     /// Get the round seigniorage rate.
     GetRoundSeigniorageRate {
         #[serde(skip_serializing)]
-        round_seigniorage_rate_request: RoundSeigniorageRateRequest,
-        responder: Responder<Result<Ratio<U512>, engine_state::Error>>,
+        request: RoundSeigniorageRateRequest,
+        responder: Responder<RoundSeigniorageRateResult>,
     },
     /// Returns validator weights.
     GetEraValidators {
@@ -817,49 +771,46 @@ pub(crate) enum ContractRuntimeRequest {
         #[serde(skip_serializing)]
         request: EraValidatorsRequest,
         /// Responder to call with the result.
-        responder: Responder<Result<EraValidators, GetEraValidatorsError>>,
+        responder: Responder<EraValidatorsResult>,
     },
     /// Return all values at a given state root hash and given key tag.
     GetAllValues {
         /// Get all values request.
         #[serde(skip_serializing)]
-        get_all_values_request: GetAllValuesRequest,
+        all_values_request: AllValuesRequest,
         /// Responder to call with the result.
-        responder: Responder<Result<GetAllValuesResult, engine_state::Error>>,
+        responder: Responder<AllValuesResult>,
     },
     /// Returns the value of the execution results checksum stored in the ChecksumRegistry for the
     /// given state root hash.
     GetExecutionResultsChecksum {
         state_root_hash: Digest,
-        responder: Responder<Result<Option<Digest>, engine_state::Error>>,
+        responder: Responder<ExecutionResultsChecksumResult>,
     },
-    /// Returns an `AddressableEntity` if found under the given key.  If a legacy `Account` exists
-    /// under the given key, it will be converted to an `AddressableEntity` and returned.
+    /// Returns an `AddressableEntity` if found under the given key.  If a legacy `Account`
+    /// or contract exists under the given key, it will be migrated to an `AddressableEntity`
+    /// and returned. However, global state is not altered and the migrated record does not
+    /// actually exist.
     GetAddressableEntity {
         state_root_hash: Digest,
         key: Key,
-        responder: Responder<Option<AddressableEntity>>,
+        responder: Responder<AddressableEntityResult>,
     },
     /// Get a trie or chunk by its ID.
     GetTrie {
-        /// The ID of the trie (or chunk of a trie) to be read.
-        trie_or_chunk_id: TrieOrChunkId,
+        /// A request for a trie element.
+        #[serde(skip_serializing)]
+        request: TrieRequest,
         /// Responder to call with the result.
-        responder: Responder<Result<Option<TrieOrChunk>, ContractRuntimeError>>,
-    },
-    /// Get a trie by its ID.
-    GetTrieFull {
-        /// The ID of the trie to be read.
-        trie_key: Digest,
-        /// Responder to call with the result.
-        responder: Responder<Result<GetTrieFullResult, engine_state::Error>>,
+        responder: Responder<TrieResult>,
     },
     /// Insert a trie into global storage
     PutTrie {
-        /// The hash of the value to get from the `TrieStore`
-        trie_bytes: TrieRaw,
-        /// Responder to call with the result. Contains the hash of the stored trie.
-        responder: Responder<Result<Digest, engine_state::Error>>,
+        /// A request to persist a trie element.
+        #[serde(skip_serializing)]
+        request: PutTrieRequest,
+        /// Responder to call with the result. Contains the hash of the persisted trie.
+        responder: Responder<PutTrieResult>,
     },
     /// Execute transaction without committing results
     SpeculativelyExecute {
@@ -880,20 +831,24 @@ impl Display for ContractRuntimeRequest {
             } => {
                 write!(formatter, "executable_block: {}", executable_block)
             }
-            ContractRuntimeRequest::Query { query_request, .. } => {
+            ContractRuntimeRequest::Query {
+                request: query_request,
+                ..
+            } => {
                 write!(formatter, "query request: {:?}", query_request)
             }
             ContractRuntimeRequest::GetBalance {
-                balance_request, ..
+                request: balance_request,
+                ..
             } => write!(formatter, "balance request: {:?}", balance_request),
             ContractRuntimeRequest::GetTotalSupply {
-                total_supply_request,
+                request: total_supply_request,
                 ..
             } => {
                 write!(formatter, "get total supply: {:?}", total_supply_request)
             }
             ContractRuntimeRequest::GetRoundSeigniorageRate {
-                round_seigniorage_rate_request,
+                request: round_seigniorage_rate_request,
                 ..
             } => {
                 write!(
@@ -906,7 +861,7 @@ impl Display for ContractRuntimeRequest {
                 write!(formatter, "get era validators: {:?}", request)
             }
             ContractRuntimeRequest::GetAllValues {
-                get_all_values_request,
+                all_values_request: get_all_values_request,
                 ..
             } => {
                 write!(
@@ -933,16 +888,11 @@ impl Display for ContractRuntimeRequest {
                     key, state_root_hash
                 )
             }
-            ContractRuntimeRequest::GetTrie {
-                trie_or_chunk_id, ..
-            } => {
-                write!(formatter, "get trie_or_chunk_id: {}", trie_or_chunk_id)
+            ContractRuntimeRequest::GetTrie { request, .. } => {
+                write!(formatter, "get trie: {:?}", request)
             }
-            ContractRuntimeRequest::GetTrieFull { trie_key, .. } => {
-                write!(formatter, "get trie_key: {}", trie_key)
-            }
-            ContractRuntimeRequest::PutTrie { trie_bytes, .. } => {
-                write!(formatter, "trie: {:?}", trie_bytes)
+            ContractRuntimeRequest::PutTrie { request, .. } => {
+                write!(formatter, "trie: {:?}", request)
             }
             ContractRuntimeRequest::SpeculativelyExecute {
                 execution_prestate,
@@ -1018,9 +968,11 @@ impl Display for SyncGlobalStateRequest {
 }
 
 /// A block validator request.
-#[derive(Debug)]
+#[derive(Debug, DataSize)]
 #[must_use]
 pub(crate) struct BlockValidationRequest {
+    /// The height of the proposed block in the chain.
+    pub(crate) proposed_block_height: u64,
     /// The block to be validated.
     pub(crate) block: ProposedBlock<ClContext>,
     /// The sender of the block, which will be asked to provide all missing deploys.

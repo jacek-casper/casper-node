@@ -27,7 +27,7 @@ use crate::global_state::{
         operations::{self, read, read_with_proof, write, ReadResult, WriteResult},
         TrieStore,
     },
-    DEFAULT_TEST_MAX_DB_SIZE, DEFAULT_TEST_MAX_READERS,
+    DEFAULT_MAX_DB_SIZE, DEFAULT_MAX_READERS,
 };
 
 use super::compute_state_hash;
@@ -571,8 +571,8 @@ impl LmdbTestContext {
         let _temp_dir = tempdir()?;
         let environment = LmdbEnvironment::new(
             _temp_dir.path(),
-            DEFAULT_TEST_MAX_DB_SIZE,
-            DEFAULT_TEST_MAX_READERS,
+            DEFAULT_MAX_DB_SIZE,
+            DEFAULT_MAX_READERS,
             true,
         )?;
         let store = LmdbTrieStore::new(&environment, None, DatabaseFlags::empty())?;

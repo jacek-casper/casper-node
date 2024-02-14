@@ -13,10 +13,11 @@ use derive_more::From;
 use num_rational::Ratio;
 use rand::{seq::IteratorRandom, Rng};
 
+use casper_storage::data_access_layer::ExecutionResultsChecksumResult;
 use casper_types::{
     global_state::TrieMerkleProof, testing::TestRng, AccessRights, BlockV2, CLValue, Chainspec,
-    Deploy, EraId, Key, LegacyRequiredFinality, ProtocolVersion, PublicKey, SecretKey, StoredValue,
-    TestBlockBuilder, TestBlockV1Builder, TimeDiff, URef, U512,
+    Deploy, Digest, EraId, Key, LegacyRequiredFinality, ProtocolVersion, PublicKey, SecretKey,
+    StoredValue, TestBlockBuilder, TestBlockV1Builder, TimeDiff, URef, U512,
 };
 
 use super::*;
@@ -2512,7 +2513,7 @@ async fn historical_sync_no_legacy_block() {
                 state_root_hash,
                 responder,
             },
-        )) => responder.respond(Ok(Some(state_root_hash))).await,
+        )) => responder.respond(ExecutionResultsChecksumResult::Success {checksum: state_root_hash}).await,
         other => panic!("Event should be of type `ContractRuntimeRequest(ContractRuntimeRequest::GetExecutionResultsChecksum) but it is {:?}", other),
     }
 
@@ -2521,7 +2522,9 @@ async fn historical_sync_no_legacy_block() {
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(Some(Digest::SENTINEL_NONE)),
+            result: ExecutionResultsChecksumResult::Success {
+                checksum: Digest::SENTINEL_NONE,
+            },
         },
     );
     let events = mock_reactor.process_effects(effects).await;
@@ -2736,7 +2739,7 @@ async fn historical_sync_legacy_block_strict_finality() {
                 state_root_hash,
                 responder,
             },
-        )) => responder.respond(Ok(Some(state_root_hash))).await,
+             )) => responder.respond(ExecutionResultsChecksumResult::Success {checksum: state_root_hash}).await,
         other => panic!("Event should be of type `ContractRuntimeRequest(ContractRuntimeRequest::GetExecutionResultsChecksum) but it is {:?}", other),
     }
 
@@ -2745,7 +2748,7 @@ async fn historical_sync_legacy_block_strict_finality() {
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(None), // No checksum because we want to test a legacy block
+            result: ExecutionResultsChecksumResult::RegistryNotFound, // test a legacy block
         },
     );
     let events = mock_reactor.process_effects(effects).await;
@@ -2936,7 +2939,7 @@ async fn historical_sync_legacy_block_weak_finality() {
                 state_root_hash,
                 responder,
             },
-        )) => responder.respond(Ok(Some(state_root_hash))).await,
+             )) => responder.respond(ExecutionResultsChecksumResult::Success {checksum: state_root_hash}).await,
         other => panic!("Event should be of type `ContractRuntimeRequest(ContractRuntimeRequest::GetExecutionResultsChecksum) but it is {:?}", other),
     }
 
@@ -2945,7 +2948,7 @@ async fn historical_sync_legacy_block_weak_finality() {
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(None), // No checksum because we want to test a legacy block
+            result: ExecutionResultsChecksumResult::RegistryNotFound, // test a legacy block
         },
     );
     let events = mock_reactor.process_effects(effects).await;
@@ -3147,7 +3150,7 @@ async fn historical_sync_legacy_block_any_finality() {
                 state_root_hash,
                 responder,
             },
-        )) => responder.respond(Ok(Some(state_root_hash))).await,
+             )) => responder.respond(ExecutionResultsChecksumResult::Success {checksum: state_root_hash}).await,
         other => panic!("Event should be of type `ContractRuntimeRequest(ContractRuntimeRequest::GetExecutionResultsChecksum) but it is {:?}", other),
     }
 
@@ -3156,7 +3159,7 @@ async fn historical_sync_legacy_block_any_finality() {
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(None), // No checksum because we want to test a legacy block
+            result: ExecutionResultsChecksumResult::RegistryNotFound, // test a legacy block
         },
     );
     let events = mock_reactor.process_effects(effects).await;
@@ -3795,7 +3798,9 @@ async fn historical_sync_latch_should_not_decrement_for_old_deploy_fetch_respons
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(Some(Digest::SENTINEL_NONE)),
+            result: ExecutionResultsChecksumResult::Success {
+                checksum: Digest::SENTINEL_NONE,
+            },
         },
     );
 
@@ -4080,7 +4085,7 @@ async fn historical_sync_latch_should_not_decrement_for_old_execution_results() 
         rng,
         Event::GotExecutionResultsChecksum {
             block_hash: *block.hash(),
-            result: Ok(Some(checksum)),
+            result: ExecutionResultsChecksumResult::Success { checksum },
         },
     );
 
