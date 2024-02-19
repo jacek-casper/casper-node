@@ -1,5 +1,4 @@
-use alloc::collections::VecDeque;
-use alloc::vec::Vec;
+use alloc::{collections::VecDeque, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 use crate::bytesrepr::{self, Bytes, FromBytes, ToBytes};
@@ -212,8 +211,7 @@ where
 mod tests {
     use proptest::prelude::*;
 
-    use crate::bytesrepr;
-    use crate::gens;
+    use crate::{bytesrepr, gens};
 
     proptest! {
         #[test]
