@@ -97,7 +97,7 @@ impl Display for Event {
 #[derive(Debug, Error)]
 pub(crate) enum Error {
     /// Error setting up the diagnostics port's unix socket listener.
-    #[error("could not setup diagnostics port listener")]
+    #[error("could not setup diagnostics port listener: {:?}", .0)]
     SetupListener(#[from] io::Error),
 }
 
